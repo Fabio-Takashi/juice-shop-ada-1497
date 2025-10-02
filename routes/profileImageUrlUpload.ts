@@ -43,7 +43,13 @@ export function profileImageUrlUpload () {
             return
           }
 
-          const response = await fetch(url)
+          // Reconstruct the URL from trusted components only
+          if (parsedUrl.username || parsedUrl.password || parsedUrl.hash) {
+            next(new Error('Userinfo or fragments not allowed in image URL'))
+            return
+          }
+          const safeUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}${parsedUrl.pathname}${parsedUrl.search}`
+          const response = await fetch(safeUrl)
           if (!response.ok || !response.body) {
             throw new Error('url returned a non-OK status code or an empty body')
           }
