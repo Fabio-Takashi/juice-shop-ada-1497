@@ -14,6 +14,13 @@ import * as utils from '../lib/utils'
 import logger from '../lib/logger'
 
 export function profileImageUrlUpload () {
+  // Allow-list for permitted image hostnames
+  const ALLOWED_HOSTNAMES = [
+    'images.unsplash.com',
+    'imgur.com',
+    'i.imgur.com',
+    'cdn.pixabay.com'
+  ]
   return async (req: Request, res: Response, next: NextFunction) => {
     if (req.body.imageUrl !== undefined) {
       const url = req.body.imageUrl
@@ -21,6 +28,21 @@ export function profileImageUrlUpload () {
       const loggedInUser = security.authenticatedUsers.get(req.cookies.token)
       if (loggedInUser) {
         try {
+          let parsedUrl
+          try {
+            parsedUrl = new URL(url)
+          } catch (parseError) {
+            next(new Error('Invalid image URL format'))
+            return
+          }
+          if (
+            !['https:', 'http:'].includes(parsedUrl.protocol) ||
+            !ALLOWED_HOSTNAMES.includes(parsedUrl.hostname)
+          ) {
+            next(new Error('Image host or protocol not allowed'))
+            return
+          }
+
           const response = await fetch(url)
           if (!response.ok || !response.body) {
             throw new Error('url returned a non-OK status code or an empty body')
